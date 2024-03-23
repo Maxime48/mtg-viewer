@@ -2,18 +2,13 @@
 
 namespace App\Command;
 
-use App\Entity\Artist;
 use App\Entity\Card;
-use App\Repository\ArtistRepository;
-use App\Repository\CardRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Helper\ProgressIndicator;
-use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
-use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
@@ -42,10 +37,12 @@ class ImportCardCommand extends Command
 
         // On récupère le temps actuel
         $start = microtime(true);
+        $this->logger->info('Start timer : ' . $start);
 
         $this->logger->info('Importing cards from ' . $filepath);
         if ($handle === false) {
             $io->error('File not found');
+            $this->logger->error('File not found');
             return Command::FAILURE;
         }
 
@@ -63,6 +60,10 @@ class ImportCardCommand extends Command
                 $this->addCard($row);
             }
 
+            if ($i > 10000) {
+                break;
+            }
+
             if ($i % 2000 === 0) {
                 $this->entityManager->flush();
                 $this->entityManager->clear();
@@ -77,7 +78,9 @@ class ImportCardCommand extends Command
 
         // On récupère le temps actuel, et on calcule la différence avec le temps de départ
         $end = microtime(true);
+        $this->logger->info('End timer : ' . $end);
         $timeElapsed = $end - $start;
+        $this->logger->info('Time elapsed : ' . $timeElapsed);
         $io->success(sprintf('Imported %d cards in %.2f seconds', $i, $timeElapsed));
         return Command::SUCCESS;
     }
@@ -106,6 +109,5 @@ class ImportCardCommand extends Command
         $card->setText($row['text']);
         $card->setType($row['type']);
         $this->entityManager->persist($card);
-
     }
 }

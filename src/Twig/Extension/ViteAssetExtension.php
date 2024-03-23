@@ -2,26 +2,17 @@
 
 namespace App\Twig\Extension;
 
-use App\Twig\Runtime\ViteAssetExtensionRuntime;
 use Twig\Extension\AbstractExtension;
-use Twig\TwigFilter;
 use Twig\TwigFunction;
 
 class ViteAssetExtension extends AbstractExtension
 {
     public function __construct(
-        private readonly bool $isDev,
+        private readonly bool   $isDev,
         private readonly string $manifestPath,
-        private array $manifestData = []
-    ) {
-    }
-
-    private function readManifest(): array
+        private array           $manifestData = []
+    )
     {
-        if (empty($this->manifestData)) {
-            $this->manifestData = json_decode(file_get_contents($this->manifestPath), true);
-        }
-        return $this->manifestData ?? [];
     }
 
     public function getFunctions(): array
@@ -32,7 +23,13 @@ class ViteAssetExtension extends AbstractExtension
         ];
     }
 
+    public function renderViteScriptTags(string $entrypoint): string
+    {
+        return $this->isDev ? $this->generateViteScriptTagsDev($entrypoint) : $this->generateViteScriptTagsProd($entrypoint);
+    }
+
     /* Generate script tags */
+
     private function generateViteScriptTagsDev(string $entrypoint): string
     {
         return "
@@ -50,9 +47,17 @@ class ViteAssetExtension extends AbstractExtension
         ";
     }
 
-    public function renderViteScriptTags(string $entrypoint): string
+    private function readManifest(): array
     {
-        return $this->isDev ? $this->generateViteScriptTagsDev($entrypoint) : $this->generateViteScriptTagsProd($entrypoint);
+        if (empty($this->manifestData)) {
+            $this->manifestData = json_decode(file_get_contents($this->manifestPath), true);
+        }
+        return $this->manifestData;
+    }
+
+    public function renderViteLinkTags(string $entrypoint): string
+    {
+        return $this->isDev ? '' : $this->generateViteLinkTagsProd($entrypoint);
     }
 
     private function generateViteLinkTagsProd(string $entrypoint): string
@@ -60,10 +65,5 @@ class ViteAssetExtension extends AbstractExtension
         $scripts = $this->readManifest()[$entrypoint]['file'];
 
         return "<link rel=\"stylesheet\" href=\"/build/$scripts\">";
-    }
-
-    public function renderViteLinkTags(string $entrypoint): string
-    {
-        return $this->isDev ? '' : $this->generateViteLinkTagsProd($entrypoint);
     }
 }
